@@ -1,77 +1,109 @@
-require('http').createServer((req,res)=>res.end('Bot Azkar ON')).listen(process.env.PORT||3000);
-const { default: makeWASocket, useMultiFileAuthState, fetchLatestBaileysVersion } = require('@whiskeysockets/baileys');
+// بوت أذكار احترافي - Khaabz Bot
+const http = require('http');
+http.createServer((req, res) => res.end('Khaabz Bot Online ✅')).listen(process.env.PORT || 10000);
+
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys');
 const P = require('pino');
+const fs = require('fs');
 
-const azkar = [
-"سبحان الله وبحمده، سبحان الله العظيم ❤️",
-"لا إله إلا الله وحده لا شريك له، له الملك وله الحمد",
-"أستغفر الله العظيم وأتوب إليه",
-"اللهم صل وسلم على نبينا محمد ﷺ",
-"لا حول ولا قوة إلا بالله",
-"سبحان الله، الحمد لله، لا إله إلا الله، الله أكبر"
-];
-const ahadith = [
-"قال ﷺ: من قال سبحان الله وبحمده 100 مرة حُطت خطاياه",
-"قال ﷺ: كلمتان خفيفتان على اللسان ثقيلتان في الميزان: سبحان الله وبحمده سبحان الله العظيم",
-"قال ﷺ: من صلى عليّ واحدة صلى الله عليه عشرا"
-];
-const ad3iya = [
-"اللهم إني أسألك العفو والعافية في الدنيا والآخرة",
-"اللهم اغفر لي وارحمني واهدني وعافني وارزقني",
-"يا حي يا قيوم برحمتك أستغيث أصلح لي شأني كله"
-];
+// === قاعدة البيانات ===
+const DB = {
+  azkar: [
+    "سبحان الله وبحمده، سبحان الله العظيم ❤️",
+    "لا إله إلا الله وحده لا شريك له، له الملك وله الحمد وهو على كل شيء قدير",
+    "أستغفر الله العظيم الذي لا إله إلا هو الحي القيوم وأتوب إليه",
+    "اللهم صل وسلم وبارك على نبينا محمد ﷺ",
+    "لا حول ولا قوة إلا بالله العلي العظيم",
+    "سبحان الله، والحمد لله، ولا إله إلا الله، والله أكبر",
+  ],
+  ahadith: [
+    "قال ﷺ: (كلمتان خفيفتان على اللسان ثقيلتان في الميزان حبيبتان إلى الرحمن: سبحان الله وبحمده سبحان الله العظيم)",
+    "قال ﷺ: (من قال سبحان الله وبحمده في يوم مائة مرة حطت خطاياه وإن كانت مثل زبد البحر)",
+    "قال ﷺ: (من صلى علي واحدة صلى الله عليه عشرا)",
+  ],
+  ad3iya: [
+    "اللهم إني أسألك العفو والعافية في الدنيا والآخرة 🤲",
+    "اللهم اغفر لي وارحمني واهدني وعافني وارزقني",
+    "يا حي يا قيوم برحمتك أستغيث أصلح لي شأني كله ولا تكلني إلى نفسي طرفة عين",
+    "اللهم أعنا على ذكرك وشكرك وحسن عبادتك",
+  ]
+};
 
-async function start(){
-    const { version } = await fetchLatestBaileysVersion();
-    const { state, saveCreds } = await useMultiFileAuthState('./auth');
-    const sock = makeWASocket({ version, auth: state, logger: P({level:'silent'}), browser:['Ubuntu','Chrome','20.0'] });
-    sock.ev.on('creds.update', saveCreds);
-    sock.ev.on('connection.update', u=>{
-        const { connection, qr } = u;
-        if(qr){
-            console.log('QR:', qr);
-            console.log('افتح: https://api.qrserver.com/v1/create-qr-code/?size=300x300&data='+encodeURIComponent(qr));
-        }
-        if(connection==='open') console.log('✅ تم الاتصال');
-        if(connection==='close') start();
-    });
-    sock.ev.on('messages.upsert', async m=>{
-        try{
-            const msg = m.messages[0];
-            if(!msg.message || msg.key.fromMe) return;
-            const from = msg.key.remoteJid;
-            let text = (msg.message.conversation || msg.message.extendedTextMessage?.text || '').trim().toLowerCase();
-            // يشيل النقطة
-            text = text.replace('.', '');
+const getRandom = (arr) => arr[Math.floor(Math.random() * arr.length)];
 
-            if(text==='اوامر' || text==='بوت' || text==='menu'){
-                await sock.sendMessage(from, {text:`🤖 *بوت الأذكار - Mai* 🤍
+async function startBot() {
+  const { state, saveCreds } = await useMultiFileAuthState('./auth');
+  
+  const sock = makeWASocket({
+    auth: state,
+    logger: P({ level: 'silent' }),
+    browser: ['Khaabz Bot', 'Chrome', '1.0'],
+    printQRInTerminal: false,
+  });
 
-*الأوامر:*
-.ذكر - ذكر عشوائي
-.حديث - حديث شريف
-.دعاء - دعاء
-.اذكار - اذكار الصباح والمساء
-.قران - آية
-.اوامر - هذه القائمة
+  sock.ev.on('creds.update', saveCreds);
 
-سبحان الله وبحمده ❤️`});
-            }
-            else if(text==='ذكر' || text==='اذكار' || text==='زكر'){
-                await sock.sendMessage(from, {text: azkar[Math.floor(Math.random()*azkar.length)]});
-            }
-            else if(text==='حديث'){
-                await sock.sendMessage(from, {text: '📜 '+ahadith[Math.floor(Math.random()*ahadith.length)]});
-            }
-            else if(text==='دعاء' || text=='دعاء'){
-                await sock.sendMessage(from, {text: '🤲 '+ad3iya[Math.floor(Math.random()*ad3iya.length)]});
-            }
-        }catch(e){ console.log(e); }
-    });
+  sock.ev.on('connection.update', async (update) => {
+    const { connection, lastDisconnect, qr } = update;
 
-    // اذكار تلقائية كل ساعة - اذا تبي تلغيها احذف السطرين اللي تحت
-    // setInterval(async()=>{
-    // // هنا تقدر تحط id قروب يرسل له تلقائي
-    // }, 3600000);
+    if (qr) {
+      console.log('--- QR CODE ---');
+      console.log(qr);
+      console.log(`رابط المسح السريع: https://api.qrserver.com/v1/create-qr-code/?size=400x400&data=${encodeURIComponent(qr)}`);
+    }
+
+    if (connection === 'open') {
+      console.log('✅ تم الاتصال بنجاح - البوت شغال');
+    }
+
+    if (connection === 'close') {
+      const shouldReconnect = lastDisconnect?.error?.output?.statusCode !== DisconnectReason.loggedOut;
+      console.log('❌ انقطع الاتصال، إعادة المحاولة...');
+      if (shouldReconnect) startBot();
+    }
+  });
+
+  sock.ev.on('messages.upsert', async ({ messages }) => {
+    try {
+      const msg = messages[0];
+      if (!msg.message || msg.key.fromMe) return;
+
+      const from = msg.key.remoteJid;
+      const rawText = msg.message.conversation || msg.message.extendedTextMessage?.text || "";
+      const text = rawText.trim().toLowerCase().replace(/[.\s]+/g, "");
+
+      if (!text) return;
+
+      // الأوامر
+      if (['اوامر','menu','بوت','help'].some(c => text.includes(c))) {
+        await sock.sendMessage(from, {
+          text: `🤖 *بوت الأذكار - Mai* 🤍\n\n` +
+                `*╭── الأوامر ──╮*\n` +
+                `*├* \`.ذكر\` - ذكر عشوائي\n` +
+                `*├* \`.دعاء\` - دعاء\n` +
+                `*├* \`.حديث\` - حديث شريف\n` +
+                `*├* \`.اية\` - آية قرآنية\n` +
+                `*╰* \`.اوامر\` - هذه القائمة\n\n` +
+                `_اكتب الأمر بدون نقطة يشتغل برضو_\n\nسبحان الله وبحمده ❤️`
+        });
+      }
+      else if (text.includes('ذكر')) {
+        await sock.sendMessage(from, { text: getRandom(DB.azkar) });
+      }
+      else if (text.includes('دعاء')) {
+        await sock.sendMessage(from, { text: `🤲 ${getRandom(DB.ad3iya)}` });
+      }
+      else if (text.includes('حديث')) {
+        await sock.sendMessage(from, { text: `📜 ${getRandom(DB.ahadith)}` });
+      }
+      else if (text.includes('اية') || text.includes('قران')) {
+        await sock.sendMessage(from, { text: `﴿ وَاذْكُر رَّبَّكَ إِذَا نَسِيتَ ﴾ [الكهف:24] 🤍` });
+      }
+
+    } catch (e) {
+      console.log('خطأ بالرسالة:', e.message);
+    }
+  });
 }
-start();
+
+startBot();
