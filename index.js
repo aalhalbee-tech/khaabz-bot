@@ -3,85 +3,47 @@ const express = require("express")
 const QRCode = require("qrcode")
 const app = express()
 let qr=null, connected=false
-const SIGN="\n\n— بوت ابو تقى 👑"
 
 app.get("/", async (req,res)=>{
-  if(connected) return res.send("<h1 style=text-align:center;margin-top:100px>✅ بوت ابو تقى شغال</h1>")
-  if(!qr) return res.send('<head><meta http-equiv="refresh" content="2"></head><h1 style=text-align:center>⏳ انتظار باركود</h1>')
+  if(connected) return res.send("<h1 style=text-align:center>✅ بوت ابو تقى شغال</h1>")
+  if(!qr) return res.send("<h1 style=text-align:center>⏳ انتظار باركود</h1>")
   const img=await QRCode.toDataURL(qr)
-  res.send(`<div style=text-align:center;margin-top:20px><h2>بوت ابو تقى</h2><img src="${img}" style="width:300px;border:8px solid #000;border-radius:20px"></div>`)
+  res.send(`<center><img src="${img}" style="width:300px"></center>`)
 })
 app.listen(process.env.PORT||10000)
 
-const azkar=["سبحان الله وبحمده","لا اله الا الله","استغفر الله","لا حول ولا قوة الا بالله"]
-const quran=["الا بذكر الله تطمئن القلوب","ان مع العسر يسرا","لا تحزن ان الله معنا"]
-const nokat=["محشش قالو له شو احلى شي؟ قال لما الشرطي يقول اتفضل روح 😂","بخيل مات كتبوا على قبره ادخلوا ببلاش 😂"]
-const saraha=["صراحة.. تحب احد في القروب؟","صراحة.. اخر كذبة كذبتها؟","لو تطرد واحد مين تختار؟"]
-const tahadi=["تحدي: غني ريكورد 😂","تحدي: غير اسمك لبطيخة 10 دقايق","تحدي: ارسل اغبى صورة عندك"]
-
 async function start(){
   const {state, saveCreds}=await useMultiFileAuthState("session")
-  const sock=makeWASocket({auth: state, browser: ["Khaabz","Chrome","1.0"]})
+  const sock=makeWASocket({auth: state, browser: ["bot","Chrome","1"]})
   sock.ev.on("creds.update", saveCreds)
   sock.ev.on("connection.update", u=>{
     if(u.qr) qr=u.qr
-    if(u.connection==="open"){ connected=true; qr=null; console.log("✅ تم الربط") }
+    if(u.connection==="open"){ connected=true; qr=null; console.log("connected") }
     if(u.connection==="close") setTimeout(start,3000)
   })
-
   sock.ev.on("messages.upsert", async (m)=>{
     const msg=m.messages[0]
     if(!msg.message) return
     if(msg.key.fromMe) return
     const jid=msg.key.remoteJid
-    const body=(msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim()
-    const low=body.toLowerCase()
+    const txt=(msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim()
+    const low=txt.toLowerCase()
 
     if(low==".الاوامر"){
-      await sock.sendMessage(jid,{text:"*👑 اوامر بوت ابو تقى*\n\n.ذكر\n.قران\n.نكتة\n.صراحة\n.تحدي\n.حب احمد + سارة\n.منشن\n.المصمم\n.اسعاري\n.بوت\n"+SIGN})
+      await sock.sendMessage(jid,{text:"اوامر بوت ابو تقى:\n.ذكر\n.قران\n.نكتة\n.صراحة\n.تحدي\n.بوت"})
+      return
+    }
+    if(low==".بوت"){
+      await sock.sendMessage(jid,{text:"✅ البوت شغال - ابو تقى 👑"})
       return
     }
     if(low==".ذكر"){
-      const r=azkar[Math.floor(Math.random()*azkar.length)]
-      await sock.sendMessage(jid,{text:"📿 "+r+SIGN},{quoted:msg})
+      await sock.sendMessage(jid,{text:"📿 سبحان الله وبحمده\n— ابو تقى 👑"})
       return
     }
-    if(low==".قران"){
-      const r=quran[Math.floor(Math.random()*quran.length)]
-      await sock.sendMessage(jid,{text:"📖 "+r+SIGN},{quoted:msg})
-      return
-    }
-    if(low==".نكتة"){
-      const r=nokat[Math.floor(Math.random()*nokat.length)]
-      await sock.sendMessage(jid,{text:"😂 "+r+SIGN})
-      return
-    }
-    if(low==".صراحة"){
-      const r=saraha[Math.floor(Math.random()*saraha.length)]
-      await sock.sendMessage(jid,{text:"🎲 "+r+SIGN})
-      return
-    }
-    if(low==".تحدي"){
-      const r=tahadi[Math.floor(Math.random()*tahadi.length)]
-      await sock.sendMessage(jid,{text:"😈 "+r+SIGN})
-      return
-    }
-    if(low.startsWith(".حب ")){
-      const parts=body.slice(4).split("+")
-      if(parts.length<2){ await sock.sendMessage(jid,{text:"اكتب: .حب احمد + سارة"}); return }
-      const p=Math.floor(Math.random()*100)+1
-      await sock.sendMessage(jid,{text:"💘 "+parts[0].trim()+" + "+parts[1].trim()+" = "+p+"% "+(p>70?"❤️":"💔")+SIGN})
-      return
-    }
-    if(low==".منشن"){
-      if(!jid.endsWith("@g.us")){ await sock.sendMessage(jid,{text:"للقروبات فقط"}); return }
-      const g=await sock.groupMetadata(jid)
-      const mentions=g.participants.map(x=>x.id)
-      await sock.sendMessage(jid,{text:"👑 يلا تعالو "+SIGN+"\n"+mentions.map(x=>`@${x.split('@')[0]}`).join(' '), mentions:mentions})
-      return
-    }
-    if(low==".المصمم"){
-      await sock.sendMessage(jid,{text:"👑 المصمم: ابو تقى\n🎨 تصميم شعارات - بنرات\nللطلب خاص"})
+  })
+}
+start()      await sock.sendMessage(jid,{text:"👑 المصمم: ابو تقى\n🎨 تصميم شعارات - بنرات\nللطلب خاص"})
       return
     }
     if(low==".اسعاري"){
