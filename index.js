@@ -1,23 +1,24 @@
-const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys")
+const { default: makeWASocket, useMultiFileAuthState, delay } = require("@whiskeysockets/baileys")
 const express = require("express")
 const QRCode = require("qrcode")
 const app = express()
 let qr=null, connected=false
-const SIGN="\n\n— 👑 ابو تقى - المصمم"
 
+// رابط البوت
 app.get("/", async (req,res)=>{
-  if(connected) return res.send("<h1 style=text-align:center;margin-top:100px>✅ بوت ابو تقى شغال</h1>")
-  if(!qr) return res.send('<head><meta http-equiv="refresh" content="2"></head><h1 style=text-align:center>⏳ ثواني ويطلع الباركود</h1>')
+  if(connected) return res.send("<h1 style=text-align:center;margin-top:100px>✅ بوت ابو تقى شغال 100%</h1>")
+  if(!qr) return res.send('<head><meta http-equiv="refresh" content="2"></head><h1 style=text-align:center>⏳ انتظر ثواني للباركود</h1>')
   const img=await QRCode.toDataURL(qr)
-  res.send(`<div style=text-align:center><h2>امسح الباركود</h2><img src="${img}" style="width:300px;border:8px solid #000;border-radius:20px"></div>`)
+  res.send(`<div style=text-align:center><h2>بوت ابو تقى 👑</h2><img src="${img}" style="width:300px;border:8px solid #000;border-radius:20px"></div>`)
 })
 app.listen(process.env.PORT||10000)
 
-const azkar=["سبحان الله وبحمده","لا اله الا الله وحده لا شريك له","استغفر الله العظيم","لا حول ولا قوة الا بالله","اللهم صل على محمد"]
-const quran=["ألا بذكر الله تطمئن القلوب","إن مع العسر يسرا","لا تحزن إن الله معنا","و بشر الصابرين"]
-const nokat=["محشش سألوه شو بتحب؟ قال الشرطي لما يقول اتفضل روح 😂","بخيل مات كتبوا على قبره: الدخول مجاناً 😂","واحد غبي ضاع في السوق سأل واحد وين السوق؟ قاله بالنص 😂"]
-const saraha=["صراحة.. تحب حد في القروب؟","صراحة.. اخر كذبة؟","لو تطرد واحد من القروب مين؟","صراحة.. بتغار؟"]
-const tahadi=["تحدي: غني ريكورد 10 ثواني 😂","تحدي: غير اسمك لـ بطيخة 5 دقايق","تحدي: ارسل اغبى صورة عندك"]
+// قائمة الاذكار
+const azkar=["سبحان الله وبحمده","لا اله الا الله","استغفر الله العظيم","لا حول ولا قوة الا بالله","اللهم صل على محمد"]
+const quran=["ألا بذكر الله تطمئن القلوب ❤️","إن مع العسر يسرا","لا تحزن إن الله معنا","وبشر الصابرين","إن الله يحب المحسنين"]
+const nokat=["محشش سألوه شو بتحب؟ قال لما الشرطي يقول اتفضل روح 😂","بخيل مات كتبوا على قبره: الدخول مجاناً 😂","واحد غبي ضاع في السوق 😂"]
+const saraha=["صراحة.. تحب حد في القروب؟","صراحة.. آخر كذبة كذبتها؟","لو تطرد واحد مين؟","صراحة.. بتغار؟"]
+const tahadi=["تحدي: غني ريكورد 10 ثواني 😂","تحدي: غير اسمك لبطيخة 5 دقائق","تحدي: ارسل أغبى صورة عندك"]
 
 async function start(){
   const {state, saveCreds}=await useMultiFileAuthState("session")
@@ -36,52 +37,144 @@ async function start(){
     const body=(msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim()
     const low=body.toLowerCase()
 
+    // .الاوامر
     if(low==".الاوامر"){
-      await sock.sendMessage(jid,{text:`*👑 أوامر بوت ابو تقى الخرافي*
+      await sock.sendMessage(jid,{text:`*👑 أوامر بوت ابو تقى*
 
-📿 *.ذكر* - ذكر عشوائي
-📖 *.قران* - آية
-😂 *.نكتة* - نكتة
-🎲 *.صراحة* - لعبة صراحة
-😈 *.تحدي* - تحدي
-💘 *.حب احمد + سارة* - نسبة حب
-📢 *.منشن* - منشن للكل
-🎨 *.المصمم* - معلوماتك
-💰 *.اسعاري* - اسعارك
-🤖 *.بوت* - حالة البوت
-${SIGN}`})
+*🔧 ادارة:*
+.طرد @ - طرد عضو (للأدمن)
+.قفل / .فتح - قفل القروب
+
+*👑 تصميم:*
+.المصمم - معلوماتك
+.اسعاري - أسعار التصميم
+.اعمالي - معرض أعمالك
+
+*🎮 ترفيه:*
+.ذكر - ذكر عشوائي
+.قران - آية
+.نكتة - نكتة
+.صراحة - لعبة صراحة
+.تحدي - تحدي
+.حب احمد + سارة - نسبة حب
+.منشن - منشن للكل
+
+*🤖 حالة:*
+.بوت - حالة البوت
+
+— بوت ابو تقى 👑 | للتصميم: .المصمم`})
       return
     }
 
     if(low==".ذكر"){
       const r=azkar[Math.floor(Math.random()*azkar.length)]
-      await sock.sendMessage(jid,{text:`📿 *${r}*${SIGN}`},{quoted:msg})
+      await sock.sendMessage(jid,{text:`📿 *${r}*`},{quoted:msg})
       return
     }
 
     if(low==".قران"){
       const r=quran[Math.floor(Math.random()*quran.length)]
-      await sock.sendMessage(jid,{text:`📖 *${r}*${SIGN}`},{quoted:msg})
+      await sock.sendMessage(jid,{text:`📖 *${r}*`},{quoted:msg})
       return
     }
 
     if(low==".نكتة"){
       const r=nokat[Math.floor(Math.random()*nokat.length)]
-      await sock.sendMessage(jid,{text:`😂 ${r}${SIGN}`})
+      await sock.sendMessage(jid,{text:`😂 ${r}`})
       return
     }
 
     if(low==".صراحة"){
       const r=saraha[Math.floor(Math.random()*saraha.length)]
-      await sock.sendMessage(jid,{text:`🎲 ${r}${SIGN}`})
+      await sock.sendMessage(jid,{text:`🎲 ${r}`})
       return
     }
 
     if(low==".تحدي"){
       const r=tahadi[Math.floor(Math.random()*tahadi.length)]
-      await sock.sendMessage(jid,{text:`😈 ${r}${SIGN}`})
+      await sock.sendMessage(jid,{text:`😈 ${r}`})
       return
     }
+
+    // أمر الحب بدون توقيع مزعج
+    if(low.startsWith(".حب ")){
+      const parts=body.slice(4).split("+")
+      if(parts.length<2){ await sock.sendMessage(jid,{text:"اكتب: .حب احمد + سارة"}); return }
+      const p=Math.floor(Math.random()*100)+1
+      const heart=p>80?"💘 مولعين ❤️❤️":p>60?"💕 مناسبين":p>30?"💔 نص ونص":"💔 ما ينفع"
+      await sock.sendMessage(jid,{text:`${heart}\n*${parts[0].trim()} + ${parts[1].trim()} = ${p}%*`})
+      return
+    }
+
+    if(low==".منشن"){
+      if(!jid.endsWith("@g.us")){ await sock.sendMessage(jid,{text:"هاد للقروبات فقط"}); return }
+      const g=await sock.groupMetadata(jid)
+      const mentions=g.participants.map(x=>x.id)
+      await sock.sendMessage(jid,{text:`👑 تعالو يا حلوين\n`+mentions.map(x=>`@${x.split('@')[0]}`).join(' '), mentions:mentions})
+      return
+    }
+
+    if(low==".المصمم"){
+      await sock.sendMessage(jid,{text:`👑 *المصمم: ابو تقى*
+🎨 مصمم شعارات وبنرات احترافي
+📱 تصميم سوشيال - لوقو - بوستر
+
+للطلب: راسلني خاص ❤️`})
+      return
+    }
+
+    if(low==".اسعاري"){
+      await sock.sendMessage(jid,{text:`💰 *أسعار التصميم - ابو تقى*
+
+🔹 لوغو عادي: 50
+🔹 لوغو احترافي 3D: 100
+🔹 بنر سوشيال: 30
+🔹 باكج كامل (لوغو+بنر+كفر): 150
+
+الدفع: شحن - بايير
+
+— بوت ابو تقى 👑`})
+      return
+    }
+
+    if(low==".اعمالي"){
+      await sock.sendMessage(jid,{text:`🎨 *معرض أعمال ابو تقى*
+
+شوف شغلي على الخاص وارسل لك النماذج
+
+اكتب .المصمم للتواصل 👑`})
+      return
+    }
+
+    if(low==".بوت"){
+      await sock.sendMessage(jid,{text:`✅ البوت شغال 100%\n⚡ بوت ابو تقى 👑`})
+      return
+    }
+
+    // أوامر الادمن
+    if(low.startsWith(".طرد")){
+      if(!jid.endsWith("@g.us")) return
+      const mentioned=msg.message.extendedTextMessage?.contextInfo?.mentionedJid
+      if(!mentioned || mentioned.length==0){ await sock.sendMessage(jid,{text:"منشن الشخص: .طرد @احمد"}); return }
+      try{ await sock.groupParticipantsUpdate(jid, mentioned, "remove"); await sock.sendMessage(jid,{text:`تم الطرد ✅`}) }catch{ await sock.sendMessage(jid,{text:"لازم البوت يكون أدمن"}) }
+      return
+    }
+
+    if(low==".قفل"){
+      if(!jid.endsWith("@g.us")) return
+      try{ await sock.groupSettingUpdate(jid, "announcement"); await sock.sendMessage(jid,{text:"🔒 تم قفل القروب"}) }catch{ await sock.sendMessage(jid,{text:"لازم البوت أدمن"}) }
+      return
+    }
+
+    if(low==".فتح"){
+      if(!jid.endsWith("@g.us")) return
+      try{ await sock.groupSettingUpdate(jid, "not_announcement"); await sock.sendMessage(jid,{text:"🔓 تم فتح القروب"}) }catch{ await sock.sendMessage(jid,{text:"لازم البوت أدمن"}) }
+      return
+    }
+
+  })
+}
+start()    }
 
     if(low.startsWith(".حب ")){
       const parts=body.slice(4).split("+")
