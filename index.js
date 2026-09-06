@@ -1,46 +1,49 @@
-require('http').createServer((_,r)=>r.end('Bot Online')).listen(process.env.PORT||10000);
-const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys');
-const P = require('pino');
-const fs = require('fs');
+const { default: makeWASocket, useMultiFileAuthState } = require("@whiskeysockets/baileys")
+const express = require("express")
+const QRCode = require("qrcode")
 
-async function start(){
-  if(process.env.SESSION &&!fs.existsSync('./auth/creds.json')){
-    fs.mkdirSync('./auth',{recursive:true});
-    fs.writeFileSync('./auth/creds.json', Buffer.from(process.env.SESSION,'base64').toString());
-  }
-  const { state, saveCreds } = await useMultiFileAuthState('./auth');
-  const sock = makeWASocket({auth:state, logger:P({level:'silent'}), browser:['Ubuntu','Chrome','22.04']});
-  sock.ev.on('creds.update', saveCreds);
+const app = express()
+let lastQR = null
 
-  if(!state.creds.registered){
-    setTimeout(async()=>{
-      try{
-        let num = (process.env.NUMBER||'').replace(/[^0-9]/g,'');
-        if(!num){ console.log('حط رقمك في Environment باسم NUMBER'); return; }
-        let code = await sock.requestPairingCode(num);
-        console.log('كود الربط تبعك هو: '+code);
-        console.log('روح واتساب > الاجهزة المرتبطة > ربط برقم هاتف > اكتب الكود هذا');
-      }catch(e){ console.log('خطأ:',e.message); }
-    },5000);
-  }
+app.get("/", async (req,res) => {
+  if (!lastQR) return res.send("<h1>انتظر... الباركود جاي ⏳ حدث الصفحة بعد 5 ثواني</h1>")
+  const qrImage = await QRCode.toDataURL(lastQR)
+  res.send(`
+    <div style="text-align:center; font-family:sans-serif; margin-top:50px">
+      <h1>📱 امسح الباركود بواتساب</h1>
+      <p>واتساب > الأجهزة المرتبطة > ربط جهاز > امسح</p>
+      <img src="${qrImage}" style="width:300px; height:300px; border:10px solid #000; border-radius:20px"/>
+      <p>الباركود يتغير كل 20 ثانية، حدث الصفحة اذا انتهى</p>
+    </div>
+  `)
+})
 
-  sock.ev.on('connection.update', async u=>{
-    if(u.connection==='open'){
-      console.log('✅✅✅ البوت اشتغل وثبت');
-      if(fs.existsSync('./auth/creds.json')){
-        let b64 = Buffer.from(fs.readFileSync('./auth/creds.json')).toString('base64');
-        console.log('SESSION:'+b64);
-        console.log('انسخ السطر اللي فوق كله وحطه في Environment باسم SESSION عشان يثبت للأبد');
-      }
+app.listen(process.env.PORT || 10000, () => console.log("web شغال"))
+
+async function start() {
+  const { state, saveCreds } = await useMultiFileAuthState("session")
+  const sock = makeWASocket({ auth: state, printQRInTerminal: false, browser: ["Khaabz","Chrome","1.0"] })
+
+  sock.ev.on("creds.update", saveCreds)
+
+  sock.ev.on("connection.update", async (u) => {
+    if (u.qr) {
+      lastQR = u.qr
+      console.log("طلع باركود جديد - افتح رابط موقعك")
     }
-    if(u.connection==='close') setTimeout(start,3000);
-  });
+    if (u.connection === "open") {
+      console.log("✅ تم الربط!")
+      lastQR = null
+    }
+  })
 
-  sock.ev.on('messages.upsert', async ({messages})=>{
-    const m=messages[0]; if(!m?.message || m.key.fromMe) return;
-    let t=(m.message.conversation||m.message.extendedTextMessage?.text||'').toLowerCase();
-    if(t.includes('ذكر')) await sock.sendMessage(m.key.remoteJid,{text:'سبحان الله وبحمده ❤️'});
-    if(t.includes('اوامر')) await sock.sendMessage(m.key.remoteJid,{text:'🤖 شغال\n.ذكر'});
-  });
+  sock.ev.on("messages.upsert", async (m) => {
+    const msg = m.messages[0]
+    if (!msg.message || msg.key.fromMe) return
+    const text = msg.message.conversation || msg.message.extendedTextMessage?.text || ""
+    if (text.trim() === ".ذكر") {
+      await sock.sendMessage(msg.key.remoteJid, { text: "📿 سبحان الله وبحمده سبحان الله العظيم" })
+    }
+  })
 }
-start();
+start()
