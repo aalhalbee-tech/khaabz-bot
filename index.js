@@ -3,22 +3,21 @@ const express = require("express")
 const QRCode = require("qrcode")
 const app = express()
 let qr=null, connected=false
-const SIGN="\n\n— *بوت ابو تقى* 👑 | للتصميم:.المصمم"
+const SIGN="\n\n— بوت ابو تقى 👑"
 
 app.get("/", async (req,res)=>{
-  if(connected) return res.send("<h1 style=text-align:center;margin-top:100px>✅ بوت ابو تقى الخرافي شغال 👑🔥🕌</h1>")
-  if(!qr) return res.send('<head><meta http-equiv="refresh" content="2"></head><h1 style=text-align:center>⏳</h1>')
+  if(connected) return res.send("<h1 style=text-align:center;margin-top:100px>✅ بوت ابو تقى شغال</h1>")
+  if(!qr) return res.send('<head><meta http-equiv="refresh" content="2"></head><h1 style=text-align:center>⏳ انتظار باركود</h1>')
   const img=await QRCode.toDataURL(qr)
-  res.send(`<div style=text-align:center;margin-top:20px><h2>👑 بوت ابو تقى الخرافي</h2><img src="${img}" style="width:340px;border:10px solid #000;border-radius:20px"><script>setTimeout(()=>location.reload(),20000)</script></div>`)
+  res.send(`<div style=text-align:center;margin-top:20px><h2>بوت ابو تقى</h2><img src="${img}" style="width:300px;border:8px solid #000;border-radius:20px"></div>`)
 })
 app.listen(process.env.PORT||10000)
 
-// === الداتا ===
-const azkar=["سبحان الله وبحمده","لا إله إلا الله","أستغفر الله","لا حول ولا قوة إلا بالله","اللهم صل على محمد"]
-const quran=["﴿ ألا بذكر الله تطمئن القلوب ﴾","﴿ إن مع العسر يسرا ﴾","﴿ لا تحزن إن الله معنا ﴾"]
-const nokat=["محشش سألوه شو أحلى شي؟ قال لما الشرطي يقول اتفضل روح 😂","مرة بخيل مات كتبوا على قبره ادخلوا ببلاش 😂","نملة تزوجت فيل مات ثاني يوم قالت قضيت عمري أحفر له قبر 😂"]
-const saraha=["صراحة.. تحب أحد في القروب؟","صراحة.. آخر كذبة كذبتها؟","صراحة.. مين تكرهه في القروب؟","لو تطرد واحد مين تختار؟"]
-const tahadi=["تحدي: غني ريكورد 😂","تحدي: غير اسمك لـ بطيخة 10 دقايق","تحدي: أرسل أغبى صورة عندك","تحدي: اتصل بأمك وقلها أحبك"]
+const azkar=["سبحان الله وبحمده","لا اله الا الله","استغفر الله","لا حول ولا قوة الا بالله"]
+const quran=["الا بذكر الله تطمئن القلوب","ان مع العسر يسرا","لا تحزن ان الله معنا"]
+const nokat=["محشش قالو له شو احلى شي؟ قال لما الشرطي يقول اتفضل روح 😂","بخيل مات كتبوا على قبره ادخلوا ببلاش 😂"]
+const saraha=["صراحة.. تحب احد في القروب؟","صراحة.. اخر كذبة كذبتها؟","لو تطرد واحد مين تختار؟"]
+const tahadi=["تحدي: غني ريكورد 😂","تحدي: غير اسمك لبطيخة 10 دقايق","تحدي: ارسل اغبى صورة عندك"]
 
 async function start(){
   const {state, saveCreds}=await useMultiFileAuthState("session")
@@ -26,62 +25,76 @@ async function start(){
   sock.ev.on("creds.update", saveCreds)
   sock.ev.on("connection.update", u=>{
     if(u.qr) qr=u.qr
-    if(u.connection==="open"){ connected=true; qr=null; console.log("تم الربط!") }
+    if(u.connection==="open"){ connected=true; qr=null; console.log("✅ تم الربط") }
     if(u.connection==="close") setTimeout(start,3000)
   })
 
-  // ذكر تلقائي كل ساعة
-  setInterval(async()=>{
-    if(!connected) return
-    const text=`📿 *تذكير:*\n${azkar[Math.floor(Math.random()*azkar.length)]}${SIGN}`
-    // يرسل لنفسك كتذكير، تقدر تغيره لقروب
-    // await sock.sendMessage("120363xxx@g.us", {text})
-  }, 3600000)
-
   sock.ev.on("messages.upsert", async (m)=>{
     const msg=m.messages[0]
-    if(!msg.message || msg.key.fromMe) return
+    if(!msg.message) return
+    if(msg.key.fromMe) return
     const jid=msg.key.remoteJid
-    const text=(msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim()
-    const low=text.toLowerCase()
-    const isGroup=jid.endsWith("@g.us")
+    const body=(msg.message.conversation || msg.message.extendedTextMessage?.text || "").trim()
+    const low=body.toLowerCase()
 
-    // حماية من الروابط
-    if(isGroup && text.includes("https://")){
-      // لو تبغى يطرد تلقائي شيل // من السطر الجاي
-      // await sock.sendMessage(jid, {text: `⚠️ @${msg.key.participant.split('@')[0]} ممنوع الروابط!`, mentions:[msg.key.participant]})
+    if(low==".الاوامر"){
+      await sock.sendMessage(jid,{text:"*👑 اوامر بوت ابو تقى*\n\n.ذكر\n.قران\n.نكتة\n.صراحة\n.تحدي\n.حب احمد + سارة\n.منشن\n.المصمم\n.اسعاري\n.بوت\n"+SIGN})
+      return
     }
-
-    if(low === ".الاوامر"){
-      await sock.sendMessage(jid, {text:`*👑 بوت ابو تقى الخرافي - كل الأوامر*
-
-*🕌 إسلامي:*
-.ذكر - ذكر عشوائي
-.قران - آية
-
-*🔥 تسلية:*
-.نكتة - نكتة
-.صراحة - لعبة صراحة
-.تحدي - تحدي
-.حب احمد + سارة - نسبة الحب
-
-*👥 قروب:*
-.منشن - منشن الكل
-.طرد @ - طرد عضو (للأدمن)
-.قفل /.فتح - قفل القروب
-
-*👑 تصميم:*
-.المصمم - معلوماتك
-.اسعاري - أسعار التصميم
-.اعمالي - معرض أعمالك
-
-.بوت - حالة البوت
-${SIGN}`})
+    if(low==".ذكر"){
+      const r=azkar[Math.floor(Math.random()*azkar.length)]
+      await sock.sendMessage(jid,{text:"📿 "+r+SIGN},{quoted:msg})
+      return
     }
-    else if(low === ".ذكر"){ await sock.sendMessage(jid, {text:`📿 ${azkar[Math.floor(Math.random()*azkar.length)]}${SIGN}`}, {quoted:msg}) }
-    else if(low === ".قران"){ await sock.sendMessage(jid, {text:`📖 ${quran[Math.floor(Math.random()*quran.length)]}${SIGN}`}, {quoted:msg}) }
-    else if(low === ".نكتة"){ await sock.sendMessage(jid, {text:`😂 ${nokat[Math.floor(Math.random()*nokat.length)]}${SIGN}`}) }
-    else if(low === ".صراحة"){ await sock.sendMessage(jid, {text:`🎲 ${saraha[Math.floor(Math.random()*saraha.length)]}${SIGN}`}) }
+    if(low==".قران"){
+      const r=quran[Math.floor(Math.random()*quran.length)]
+      await sock.sendMessage(jid,{text:"📖 "+r+SIGN},{quoted:msg})
+      return
+    }
+    if(low==".نكتة"){
+      const r=nokat[Math.floor(Math.random()*nokat.length)]
+      await sock.sendMessage(jid,{text:"😂 "+r+SIGN})
+      return
+    }
+    if(low==".صراحة"){
+      const r=saraha[Math.floor(Math.random()*saraha.length)]
+      await sock.sendMessage(jid,{text:"🎲 "+r+SIGN})
+      return
+    }
+    if(low==".تحدي"){
+      const r=tahadi[Math.floor(Math.random()*tahadi.length)]
+      await sock.sendMessage(jid,{text:"😈 "+r+SIGN})
+      return
+    }
+    if(low.startsWith(".حب ")){
+      const parts=body.slice(4).split("+")
+      if(parts.length<2){ await sock.sendMessage(jid,{text:"اكتب: .حب احمد + سارة"}); return }
+      const p=Math.floor(Math.random()*100)+1
+      await sock.sendMessage(jid,{text:"💘 "+parts[0].trim()+" + "+parts[1].trim()+" = "+p+"% "+(p>70?"❤️":"💔")+SIGN})
+      return
+    }
+    if(low==".منشن"){
+      if(!jid.endsWith("@g.us")){ await sock.sendMessage(jid,{text:"للقروبات فقط"}); return }
+      const g=await sock.groupMetadata(jid)
+      const mentions=g.participants.map(x=>x.id)
+      await sock.sendMessage(jid,{text:"👑 يلا تعالو "+SIGN+"\n"+mentions.map(x=>`@${x.split('@')[0]}`).join(' '), mentions:mentions})
+      return
+    }
+    if(low==".المصمم"){
+      await sock.sendMessage(jid,{text:"👑 المصمم: ابو تقى\n🎨 تصميم شعارات - بنرات\nللطلب خاص"})
+      return
+    }
+    if(low==".اسعاري"){
+      await sock.sendMessage(jid,{text:"💰 اسعار ابو تقى\nلوغو: 50\nسوشيال: 20\nباكج كامل: 100"+SIGN})
+      return
+    }
+    if(low==".بوت"){
+      await sock.sendMessage(jid,{text:"✅ البوت شغال 100%\n👑 ابو تقى"})
+      return
+    }
+  })
+}
+start()    else if(low === ".صراحة"){ await sock.sendMessage(jid, {text:`🎲 ${saraha[Math.floor(Math.random()*saraha.length)]}${SIGN}`}) }
     else if(low === ".تحدي"){ await sock.sendMessage(jid, {text:`😈 ${tahadi[Math.floor(Math.random()*tahadi.length)]}${SIGN}`}) }
     else if(low.startsWith(".حب ")){
       const parts=text.slice(4).split("+")
