@@ -2,8 +2,20 @@ const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysocket
 const { Sticker, StickerTypes } = require('wa-sticker-formatter');
 const fs = require('fs');
 const pino = require('pino');
+const http = require('http'); // مكتبة مدمجة لإنشاء خادم الويب وحل مشكلة الـ Port
 
-// دالات مساعدة لإدارة قاعدة البيانات البسيطة (JSON) لضمان عدم ضياع البيانات عند إعادة التشغيل
+// ==========================================
+// تشغيل خادم ويب وهمي لمنصة Render
+// ==========================================
+const PORT = process.env.PORT || 3000;
+http.createServer((req, res) => {
+    res.writeHead(200, { 'Content-Type': 'text/plain; charset=utf-8' });
+    res.end('البوت يعمل بنجاح وبدون مشاكل! 🚀');
+}).listen(PORT, () => {
+    console.log(`🌐 خادم الويب الوهمي يعمل على المنفذ: ${PORT}`);
+});
+
+// دالات مساعدة لإدارة قاعدة البيانات البسيطة (JSON)
 const db = {
     read: (file) => fs.existsSync(file) ? JSON.parse(fs.readFileSync(file, 'utf-8')) : {},
     write: (file, data) => fs.writeFileSync(file, JSON.stringify(data, null, 2))
@@ -13,7 +25,6 @@ const db = {
 let tasbeeh = db.read('tasbeeh.json');
 let laws = db.read('laws.json');
 
-// مصفوفة النكات العربية المتنوعة والمضحكة
 const jokes = [
     "مرة واحد اشترى موبايل ذكي، طلع أذكى منه وما رضي يفتح له القفل 😂",
     "واحد بخيل اتجوز بخيلة، جابوا ولد حطوه في البنك 💰😂",
@@ -35,31 +46,26 @@ async function start() {
 
     sock.ev.on('creds.update', saveCreds);
 
-    // ==========================================
     // نِظام النكات المتكررة التلقائي (كل ساعة)
-    // ==========================================
     setInterval(async () => {
-        // نتحقق من وجود قروبات مسجلة في "القوانين" أو "التسبيح" لإرسال النكبة لها كمثال للمجموعات النشطة
         const activeJids = Object.keys(laws); 
-        
         if (activeJids.length > 0) {
             const randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
             const jokeMsg = `🤖 *فقرة النكتة التلقائية لتنشيط الجروب:* \n\n${randomJoke} \n\n_تفاعلوا يا جماعة! 🥳_`;
             
             for (const jid of activeJids) {
                 try {
-                    // إرسال النكتة لكل مجموعة مسجلة بالبوت
                     await sock.sendMessage(jid, { text: jokeMsg });
                 } catch (e) {
                     console.log(`فشل الإرسال للمجموعة: ${jid}`);
                 }
             }
         }
-    }, 60 * 60 * 1000); // 60 دقيقة * 60 ثانية * 1000 ملي ثانية (يعني كل ساعة تلقائياً)
+    }, 60 * 60 * 1000);
 
     sock.ev.on('messages.upsert', async (m) => {
         try {
-            const msg = m.messages[0]; // تعديل بسيط لضمان قراءة الرسالة الأولى بدقة
+            const msg = m.messages[0];
             if (!msg.message || msg.key.fromMe) return;
 
             const jid = msg.key.remoteJid;
@@ -72,10 +78,9 @@ async function start() {
             let low = text.trim().toLowerCase();
             let mentions = msg.message.extendedTextMessage?.contextInfo?.mentionedJid || [];
 
-            // 1. أمر الأوامر
             if (low === "الاوامر" || low === "أوامر" || low === "اوامر") {
                 const menu = `📜 *قائمة أوامر البوت الاحترافي*:\n\n` +
-                             `• *نكتة* 🎭 -> لطلب نكتة فورية في أي وقت\n` +
+                             `• *نكتة* 🎭 -> لطلب نكتة فورية\n` +
                              `• *تسبيح* 📿 -> لبدء تحدي تسبيح جديد\n` +
                              `• *سبحان الله* ✨ -> لزيادة العداد الحالي\n` +
                              `• *عدد* 📊 -> لمعرفة كم وصل العداد\n\n` +
@@ -88,14 +93,12 @@ async function start() {
                 return;
             }
 
-            // أمر نكتة (يدوي بطلب من العضو)
             if (low === "نكتة" || low === "نكته") {
                 const randomJoke = jokes[Math.floor(Math.random() * jokes.length)];
                 await sock.sendMessage(jid, { text: `😂 *إليك هذه النكتة:* \n\n${randomJoke}` });
                 return;
             }
 
-            // 2. نظام التسبيح المطور
             if (low === "تسبيح") {
                 tasbeeh[jid] = { count: 0 };
                 db.write('tasbeeh.json', tasbeeh);
@@ -118,12 +121,11 @@ async function start() {
             if (low === "عدد") {
                 const currentCount = tasbeeh[jid] ? tasbeeh[jid].count : null;
                 await sock.sendMessage(jid, { 
-                    text: currentCount !== null ? `📿 العداد الحالي: *${currentCount}* / 1000` : `❌ لا يوجد تحدي تسبيح قائم حالياً. اكتب *تسبيح* للبدء.` 
+                    text: currentCount !== null ? `📿 العداد الحالي: *${currentCount}* / 1000` : `❌ لا يوجد تحدي تسبيح قائم حالياً.` 
                 });
                 return;
             }
 
-            // 3. نظام القوانين
             if (low.startsWith("حط قوانين")) {
                 const lawText = text.replace(/حط قوانين/i, "").trim();
                 if (!lawText) return await sock.sendMessage(jid, { text: `⚠️ يرجى كتابة القوانين بعد الأمر.` });
@@ -139,7 +141,6 @@ async function start() {
                 return;
             }
 
-            // 4. صناعة الملصقات
             if (low === "ملصق" || low === "ستيكر") {
                 const quotedMsg = msg.message.extendedTextMessage?.contextInfo?.quotedMessage;
                 const isImage = msg.message.imageMessage || quotedMsg?.imageMessage;
@@ -163,7 +164,6 @@ async function start() {
                 return;
             }
 
-            // 5. ألعاب التسلية
             if (low.startsWith("حب")) {
                 let targetJid = mentions[0] || sender;
                 let percent = Math.floor(Math.random() * 101);
