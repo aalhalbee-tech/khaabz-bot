@@ -1,4 +1,4 @@
-const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys')
+const { default: makeWASocket, useMultiFileAuthState, DisconnectReason } = require('@whiskeysockets/baileys')
 const P = require('pino')
 
 async function startBot() {
@@ -6,24 +6,26 @@ async function startBot() {
   const sock = makeWASocket({
     auth: state,
     logger: P({ level: 'silent' }),
-    printQRInTerminal: false, // بدون باركود
+    printQRInTerminal: true, // باركود
     browser: ["Khaabz", "Chrome", "1.0.0"]
   })
 
   sock.ev.on('creds.update', saveCreds)
 
-  // يطلع كود الربط فقط
-  if (!sock.authState.creds.registered) {
-    await new Promise(r => setTimeout(r, 3000))
-    const num = "963993675005" // <--- حط رقمك هنا مع رمز البلد بدون +
-    const code = await sock.requestPairingCode(num)
-    console.log("==========================")
-    console.log("كود الربط: " + code)
-    console.log("==========================")
-  }
+  sock.ev.on('connection.update', async (u) => {
+    const { connection, lastDisconnect } = u
 
-  sock.ev.on('connection.update', (u) => {
-    if (u.connection === 'open') console.log('✅ البوت مربوط وشغال')
+    if (connection === 'open') {
+      console.log('✅ البوت مربوط وشغال')
+    }
+
+    if (connection === 'close') {
+      const reason = lastDisconnect?.error?.output?.statusCode
+      console.log("انتهى الباركود، جاري تجديد واحد جديد...")
+      if (reason!== DisconnectReason.loggedOut) {
+        setTimeout(() => startBot(), 3000) // يطلع باركود جديد بعد 3 ثواني
+      }
+    }
   })
 
   sock.ev.on('messages.upsert', async ({ messages }) => {
@@ -31,7 +33,6 @@ async function startBot() {
     if (!msg.message || msg.key.fromMe) return
     const text = msg.message.conversation || msg.message.extendedTextMessage?.text || ""
     const from = msg.key.remoteJid
-
     if (text.trim() === "الاوامر") {
       await sock.sendMessage(from, { text: "✅ البوت شغال\n\n.ملصق\n.جوجل\n.ذكاء" })
     }
