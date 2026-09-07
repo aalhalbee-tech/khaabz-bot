@@ -1,21 +1,26 @@
-const { default: makeWASocket, useMultiFileAuthState } = require('@whiskeysockets/baileys')
+// هذا الكود يخليه يرد على كلمة الاوامر
+client.ev.on('messages.upsert', async ({ messages }) => {
+  const msg = messages[0]
+  if (!msg.message) return
+  if (msg.key.fromMe) return // لا يرد على نفسه
 
-async function start(){
-const { state, saveCreds } = await useMultiFileAuthState('auth')
-const sock = makeWASocket({ auth: state, browser: ["Chrome","Chrome","1.0"] })
-sock.ev.on('creds.update', saveCreds)
+  const text = msg.message.conversation || msg.message.extendedTextMessage?.text || ""
+  const from = msg.key.remoteJid
 
-if(!state.creds.registered){
-  let phone = "963993675005" // <-- حط رقمك هنا مع رمز البلد 963
-  setTimeout(async ()=>{
-    let code = await sock.requestPairingCode(phone)
-    console.log("كود الربط تبعك: " + code)
-  }, 3000)
-}
+  console.log("رسالة جديدة:", text)
 
-sock.ev.on('connection.update', (u)=>{
-  if(u.connection=="open") console.log("✅ ارتبط واتساب بنجاح!")
+  if (text.trim() === "الاوامر") {
+    await client.sendMessage(from, {
+      text: `أهلا بك في بوت Khaabz 🔥
+
+*الاوامر المتاحة:*
+1 -.ملصق
+2 -.جوجل
+3 -.ذكاء
+4 -.لعب
+5 -.تحميل
+
+ابعت الأمر وشوف!`
+    })
+  }
 })
-// ... باقي أوامر البوت تبعك تحت
-}
-start()
